@@ -3,6 +3,7 @@ import LoginPage from '../pages/auth/LoginPage';
 import { useAuth } from '../app/hooks.useAuth';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardPage from '../pages/dashboard/Dashboard';
+import { AppLayout } from '../components/layout/AppLayout';
 
 export function AppRouter() {
   const { isAuthenticated } = useAuth();
@@ -15,15 +16,17 @@ export function AppRouter() {
         element={isAuthenticated ? <Navigate to='/dashboard' replace /> : <LoginPage />}
       />
 
-      {/* Protected Routes */}
+      {/* Protected Routes wrapped in Layout */}
       <Route
-        path='/dashboard'
         element={
           <ProtectedRoute>
-            <DashboardPage />
+            <AppLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route path='/dashboard' element={<DashboardPage />} />
+        {/* We will add /tasks, /teams, etc. here later */}
+      </Route>
 
       {/* Fallback routing */}
       <Route
