@@ -1,4 +1,4 @@
-import { createSlice, type PayloadAction, type PayloadActionCreator } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export interface Toast {
   id: string;
