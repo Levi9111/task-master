@@ -36,3 +36,35 @@ export function useLoginMutation() {
     },
   });
 }
+
+export function useRegisterMutation() {
+  const dispatch = useAppDispatch();
+
+  return useMutation({
+    mutationFn: (data: Parameters<typeof authService.register>[0]) => authService.register(data),
+    onSuccess: (response) => {
+      // 1. Save refresh token to localStorage
+      tokenStorage.setRefreshToken(response.data.refreshToken);
+
+      // 2. Save user and access token to Redux
+      dispatch(
+        setCredentials({
+          user: response.data.user,
+          accessToken: response.data.accessToken,
+        }),
+      );
+
+      // 3. Show success toast
+      dispatch(addToast({ message: 'Account created successfully! Welcome to TaskFlow.', type: 'success' }));
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Registration failed. Please try again.';
+      dispatch(
+        addToast({
+          message: Array.isArray(message) ? message[0] : message,
+          type: 'error',
+        }),
+      );
+    },
+  });
+}

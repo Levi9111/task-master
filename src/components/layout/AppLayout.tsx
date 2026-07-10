@@ -7,7 +7,7 @@ export function AppLayout() {
   const { sidebarCollapsed } = useAppSelector((state) => state.ui);
 
   return (
-    <div className='min-h-screen bg-bg-base'>
+    <div className='min-h-screen bg-bg-base text-text-primary'>
       <Sidebar />
       <Topbar />
       {/* Main content area */}

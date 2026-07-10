@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, CheckSquare, Users, BarChart2, UserCircle } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Users, BarChart2, UserCircle, Cpu } from 'lucide-react';
 import gsap from 'gsap';
 import { useAppSelector } from '../../app/store';
 import { cn } from '../../utils/cn';
@@ -11,6 +11,7 @@ const navItems = [
   { path: '/teams', label: 'Teams', icon: Users },
   { path: '/analytics', label: 'Analytics', icon: BarChart2 },
   { path: '/profile', label: 'Profile', icon: UserCircle },
+  { path: '/playground', label: 'Playground', icon: Cpu },
 ];
 
 export const Sidebar = () => {

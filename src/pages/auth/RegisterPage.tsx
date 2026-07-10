@@ -2,20 +2,21 @@ import { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useLoginMutation } from '../../queries/useAuthMutations';
+import { useRegisterMutation } from '../../queries/useAuthMutations';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
-import { Lock, Mail, Sparkles, ShieldAlert, Loader2 } from 'lucide-react';
+import { Lock, Mail, User, Sparkles, ShieldAlert, Loader2 } from 'lucide-react';
 
-const loginSchema = z.object({
+const registerSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
-export default function LoginPage() {
-  const loginMutation = useLoginMutation();
+export default function RegisterPage() {
+  const registerMutation = useRegisterMutation();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -25,20 +26,20 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
+  const onSubmit = (data: RegisterFormValues) => {
+    registerMutation.mutate(data);
   };
 
   // GSAP Entrance Animations
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Fade/slide in login card and elements
+      // Fade/slide in register card
       gsap.fromTo(
-        '.animate-login-card',
+        '.animate-register-card',
         { opacity: 0, y: 30, scale: 0.98 },
         { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: 'power3.out' }
       );
@@ -84,24 +85,24 @@ export default function LoginPage() {
             {/* Elegant dark overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-bg-surface via-transparent to-transparent opacity-85" />
           </div>
-          
+
           <div className="space-y-3">
             <h2 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-accent-primary via-white to-accent-secondary">
-              Synchronized Team Workflows
+              Start Co-authoring Workflows
             </h2>
             <p className="text-text-secondary text-sm max-w-md mx-auto leading-relaxed">
-              Experience the power of real-time collaboration, secure workspace analytics, and intuitive task boards.
+              Create an account and team space to manage real-time assignments, attachments, and collaborative boards.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Right Column: Sign In Form */}
+      {/* Right Column: Sign Up Form */}
       <div className="lg:col-span-5 flex items-center justify-center p-6 sm:p-12 relative">
-        {/* Glow behind card for mobile/tablet */}
+        {/* Glow behind card for mobile */}
         <div className="absolute w-80 h-80 rounded-full bg-accent-primary/5 blur-[100px] pointer-events-none lg:hidden" />
 
-        <div className="animate-login-card w-full max-w-md rounded-2xl border border-border-default bg-bg-surface/50 p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+        <div className="animate-register-card w-full max-w-md rounded-2xl border border-border-default bg-bg-surface/50 p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
           {/* Subtle gradient border flash */}
           <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-accent-primary via-accent-secondary to-accent-primary" />
 
@@ -116,13 +117,35 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-2xl font-extrabold text-text-primary tracking-tight">
-            Welcome Back
+            Create Account
           </h1>
           <p className="text-text-secondary text-xs mt-1 mb-8">
-            Access your secure project management dashboard.
+            Get started with TaskFlow workspaces today.
           </p>
 
           <form ref={formRef} onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* Name Group */}
+            <div className="animate-input-group space-y-1.5">
+              <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
+                Full Name
+              </label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-3.5 h-5 w-5 text-text-muted" />
+                <input
+                  {...register('name')}
+                  type="text"
+                  className="w-full rounded-xl border border-border-default bg-bg-base/40 py-3.5 pl-11 pr-4 text-sm text-text-primary placeholder-text-muted focus:border-accent-primary focus:bg-bg-base/80 focus:outline-none transition-all duration-200"
+                  placeholder="John Doe"
+                />
+              </div>
+              {errors.name && (
+                <p className="text-xs text-accent-danger font-medium flex items-center gap-1">
+                  <ShieldAlert className="h-3.5 w-3.5" />
+                  {errors.name.message}
+                </p>
+              )}
+            </div>
+
             {/* Email Group */}
             <div className="animate-input-group space-y-1.5">
               <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider">
@@ -170,30 +193,30 @@ export default function LoginPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loginMutation.isPending}
+              disabled={registerMutation.isPending}
               className="animate-input-group w-full rounded-xl bg-gradient-to-r from-accent-primary to-accent-secondary py-3.5 font-bold text-white shadow-lg shadow-accent-primary/20 transition-all duration-300 hover:shadow-accent-primary/45 hover:scale-[1.01] hover:brightness-105 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loginMutation.isPending ? (
+              {registerMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Authenticating...
+                  Creating Account...
                 </>
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  Sign In
+                  Sign Up
                 </>
               )}
             </button>
           </form>
 
           <p className="mt-8 text-center text-xs text-text-secondary">
-            Don't have a workspace account?{' '}
+            Already have an account?{' '}
             <Link
-              to="/register"
+              to="/login"
               className="text-accent-secondary hover:text-accent-primary font-bold transition-colors hover:underline"
             >
-              Sign Up
+              Sign In
             </Link>
           </p>
         </div>
