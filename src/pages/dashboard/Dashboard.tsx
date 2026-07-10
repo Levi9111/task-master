@@ -5,272 +5,337 @@ import { useTasksQuery } from '../../queries/useTaskQueries';
 import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import {
-  CheckSquare,
-  Users,
-  Plus,
-  Loader2,
-  Calendar,
-  Sparkles,
-  ChevronRight,
+  CheckSquare, Users, Plus, Loader2, Calendar,
+  TrendingUp, Clock, ChevronRight, Zap,
 } from 'lucide-react';
+
+const STATUS_STYLES: Record<string, { dot: string; text: string; bg: string }> = {
+  Done:       { dot: '#10b981', text: '#10b981', bg: 'rgba(16,185,129,0.1)'  },
+  InProgress: { dot: '#f59e0b', text: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
+  Todo:       { dot: '#7c6fff', text: '#7c6fff', bg: 'rgba(124,111,255,0.1)' },
+  Cancelled:  { dot: '#f43f5e', text: '#f43f5e', bg: 'rgba(244,63,94,0.1)'   },
+};
 
 export default function Dashboard() {
   const { user } = useAuth();
   const { data: teamsData, isLoading: teamsLoading } = useMyTeamsQuery();
   const { data: tasksData, isLoading: tasksLoading } = useTasksQuery();
-
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const teams = teamsData?.data || [];
-  const tasks = tasksData?.data || [];
-
+  const teams = teamsData?.data ?? [];
+  const tasks = tasksData?.data ?? [];
   const myTasks = tasks.filter(
     (t) => (typeof t.assigneeId === 'string' ? t.assigneeId : t.assigneeId?._id) === user?._id
   );
 
-  const todoTasks = myTasks.filter((t) => t.status === 'Todo').length;
-  const inProgressTasks = myTasks.filter((t) => t.status === 'InProgress').length;
-  const completedTasks = myTasks.filter((t) => t.status === 'Done').length;
+  const counts = {
+    total:      myTasks.length,
+    todo:       myTasks.filter((t) => t.status === 'Todo').length,
+    inProgress: myTasks.filter((t) => t.status === 'InProgress').length,
+    done:       myTasks.filter((t) => t.status === 'Done').length,
+  };
 
   const recentTasks = [...myTasks]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
+    .slice(0, 6);
 
+  const completionPct = counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0;
   const isLoading = teamsLoading || tasksLoading;
 
-  // GSAP animations for the dashboard entrance
   useEffect(() => {
     if (isLoading) return;
-
     const ctx = gsap.context(() => {
-      // Welcome banner entrance
-      gsap.fromTo(
-        '.animate-welcome-banner',
-        { opacity: 0, y: -20 },
-        { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }
-      );
-
-      // Stagger metric cards
-      gsap.fromTo(
-        '.animate-metric-card',
-        { opacity: 0, scale: 0.95, y: 20 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'back.out(1.5)', delay: 0.25 }
-      );
-
-      // Grid panels
-      gsap.fromTo(
-        '.animate-panel',
-        { opacity: 0, y: 30 },
-        { opacity: 1, y: 0, duration: 0.8, stagger: 0.15, ease: 'power2.out', delay: 0.55 }
-      );
+      gsap.fromTo('.dash-hero', { opacity: 0, y: -18 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' });
+      gsap.fromTo('.dash-stat', { opacity: 0, scale: 0.93, y: 16 }, {
+        opacity: 1, scale: 1, y: 0, duration: 0.55, stagger: 0.08, ease: 'back.out(1.4)', delay: 0.2,
+      });
+      gsap.fromTo('.dash-panel', { opacity: 0, y: 24 }, {
+        opacity: 1, y: 0, duration: 0.6, stagger: 0.12, ease: 'power2.out', delay: 0.5,
+      });
     }, containerRef);
-
     return () => ctx.revert();
   }, [isLoading]);
 
   return (
-    <div ref={containerRef} className="max-w-6xl mx-auto space-y-8 pb-16">
-      {/* Welcome Banner */}
-      <div className="animate-welcome-banner rounded-2xl border border-border-default bg-bg-surface p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-        {/* Soft neon gradient overlay */}
-        <div className="absolute right-0 top-0 h-full w-full md:w-1/2 bg-gradient-to-l from-accent-primary/10 via-accent-secondary/5 to-transparent pointer-events-none z-0" />
-        
-        {/* Embedded Premium Graphic illustration */}
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-80 h-32 opacity-25 md:opacity-40 hidden sm:block pointer-events-none z-0 rounded-xl overflow-hidden border border-border-default/20">
-          <img src="/dashboard_hero.png" alt="Collaborative graphic" className="w-full h-full object-cover object-center" />
-        </div>
+    <div ref={containerRef} className="max-w-[1100px] mx-auto space-y-7 pb-16">
 
-        <div className="space-y-2 text-center md:text-left z-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold bg-accent-primary/15 text-accent-primary border border-accent-primary/20 mb-2">
-            <Sparkles className="h-3.5 w-3.5" />
-            WORKSPACE HUB
+      {/* ── Welcome Hero ── */}
+      <div
+        className="dash-hero relative rounded-3xl overflow-hidden p-8"
+        style={{
+          background: 'linear-gradient(135deg, #0f0f1e 0%, #0d0d18 60%, #0a0a14 100%)',
+          border: '1px solid rgba(124,111,255,0.15)',
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 24px 60px rgba(0,0,0,0.4)',
+        }}
+      >
+        {/* Background decoration */}
+        <div
+          className="absolute top-0 right-0 w-[400px] h-[400px] pointer-events-none"
+          style={{ background: 'radial-gradient(circle at 80% 20%, rgba(124,111,255,0.12) 0%, transparent 60%)' }}
+        />
+        <div
+          className="absolute bottom-0 left-1/2 w-[300px] h-[300px] pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(45,212,191,0.06) 0%, transparent 70%)' }}
+        />
+        {/* Faint grid lines */}
+        <div
+          className="absolute inset-0 opacity-30 pointer-events-none"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(124,111,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(124,111,255,0.05) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
+
+        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+          <div>
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-3"
+              style={{ background: 'rgba(124,111,255,0.12)', border: '1px solid rgba(124,111,255,0.2)', color: '#a08cff' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] animate-pulse" />
+              Workspace Active
+            </div>
+            <h1 className="text-3xl font-black text-[#ededff] tracking-tight">
+              Good {getGreeting()},{' '}
+              <span
+                style={{
+                  background: 'linear-gradient(135deg, #a08cff 0%, #2dd4bf 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                {user?.name?.split(' ')[0]}
+              </span>
+            </h1>
+            <p className="text-[15px] text-[#606080] mt-1.5 max-w-lg">
+              You have{' '}
+              <span className="text-[#a08cff] font-semibold">{counts.inProgress} task{counts.inProgress !== 1 ? 's' : ''} in progress</span>
+              {' '}and{' '}
+              <span className="text-[#2dd4bf] font-semibold">{counts.todo} to start</span>
+              {' '}today.
+            </p>
           </div>
-          <h1 className="text-3xl font-extrabold text-text-primary tracking-tight">
-            Welcome back, {user?.name}!
-          </h1>
-          <p className="text-text-secondary text-sm max-w-md">
-            Here is the real-time status of your active teams, task boards, and overall milestone progress.
-          </p>
+
+          <div className="flex gap-3 flex-shrink-0">
+            <Link
+              to="/tasks"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white transition-all duration-200"
+              style={{
+                background: 'linear-gradient(135deg, #7c6fff 0%, #5b54d4 100%)',
+                boxShadow: '0 4px 16px rgba(124,111,255,0.35)',
+              }}
+            >
+              <Plus size={15} /> New Task
+            </Link>
+            <Link
+              to="/teams"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-[#ededff] transition-all duration-200"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <Users size={15} /> Teams
+            </Link>
+          </div>
         </div>
 
-        <div className="flex gap-3 z-10 w-full sm:w-auto justify-center md:justify-end">
-          <Link
-            to="/tasks"
-            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent-primary to-accent-secondary hover:brightness-105 hover:shadow-lg hover:shadow-accent-primary/20 text-white font-semibold py-3 px-5 transition-all text-sm"
-          >
-            <Plus className="h-4 w-4" />
-            New Task
-          </Link>
-          <Link
-            to="/teams"
-            className="flex items-center justify-center gap-2 rounded-xl border border-border-default bg-bg-base hover:bg-bg-overlay text-text-primary font-semibold py-3 px-5 transition-all text-sm"
-          >
-            <Users className="h-4 w-4" />
-            Manage Teams
-          </Link>
-        </div>
+        {/* Completion progress bar */}
+        {counts.total > 0 && (
+          <div className="relative z-10 mt-6 pt-5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-[#8080a0]">Overall completion</span>
+              <span className="text-xs font-bold text-[#a08cff]">{completionPct}%</span>
+            </div>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-1000"
+                style={{
+                  width: `${completionPct}%`,
+                  background: 'linear-gradient(90deg, #7c6fff, #2dd4bf)',
+                  boxShadow: '0 0 8px rgba(124,111,255,0.5)',
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="h-10 w-10 text-accent-primary animate-spin" />
-          <p className="text-text-secondary text-sm">Synchronizing your dashboard workspace...</p>
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <Loader2 className="text-[#7c6fff] animate-spin" size={36} />
+          <p className="text-[#606080] text-sm">Loading your workspace…</p>
         </div>
       ) : (
         <>
-          {/* Quick Metrics Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <MetricCard
-              label="Assigned to Me"
-              value={myTasks.length}
-              desc="Total tasks currently assigned to you"
-              color="text-accent-primary"
-              glowColor="shadow-accent-primary/5 border-accent-primary/15"
+          {/* ── Stats ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              label="Total Assigned" value={counts.total}
+              icon={<CheckSquare size={16} />}
+              color="#7c6fff" glow="rgba(124,111,255,0.15)"
             />
-            <MetricCard
-              label="To Do"
-              value={todoTasks}
-              desc="Tasks ready to begin work"
-              color="text-accent-secondary"
-              glowColor="shadow-accent-secondary/5 border-accent-secondary/15"
+            <StatCard
+              label="To Do" value={counts.todo}
+              icon={<Clock size={16} />}
+              color="#2dd4bf" glow="rgba(45,212,191,0.12)"
             />
-            <MetricCard
-              label="In Progress"
-              value={inProgressTasks}
-              desc="Active development sprints"
-              color="text-accent-warning"
-              glowColor="shadow-accent-warning/5 border-accent-warning/15"
+            <StatCard
+              label="In Progress" value={counts.inProgress}
+              icon={<TrendingUp size={16} />}
+              color="#f59e0b" glow="rgba(245,158,11,0.12)"
             />
-            <MetricCard
-              label="Completed"
-              value={completedTasks}
-              desc="Tasks successfully verified"
-              color="text-accent-success"
-              glowColor="shadow-accent-success/5 border-accent-success/15"
+            <StatCard
+              label="Completed" value={counts.done}
+              icon={<Zap size={16} />}
+              color="#10b981" glow="rgba(16,185,129,0.12)"
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Recent Tasks List */}
-            <div className="animate-panel lg:col-span-2 rounded-2xl border border-border-default bg-bg-surface p-6 shadow-xl space-y-6 flex flex-col justify-between hover:shadow-2xl transition-all duration-300">
-              <div>
-                <div className="flex items-center justify-between border-b border-border-default/50 pb-3">
-                  <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
-                    <CheckSquare className="h-5 w-5 text-accent-primary" />
-                    Recent Assignments
-                  </h3>
-                  <span className="text-xs text-text-secondary font-semibold">
-                    {myTasks.length} Assigned Task{myTasks.length === 1 ? '' : 's'}
-                  </span>
-                </div>
+          {/* ── Main Panels ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-                <div className="mt-4 divide-y divide-border-default/35">
-                  {recentTasks.length === 0 ? (
-                    <div className="text-center py-12 text-sm text-text-muted">
-                      No tasks assigned to you. Go to the taskboard to assign or create one.
-                    </div>
-                  ) : (
-                    recentTasks.map((task) => (
+            {/* Recent tasks panel */}
+            <div
+              className="dash-panel lg:col-span-2 rounded-2xl overflow-hidden"
+              style={{ background: '#0d0d18', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
+            >
+              <div
+                className="flex items-center justify-between px-6 py-4"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center"
+                    style={{ background: 'rgba(124,111,255,0.15)' }}
+                  >
+                    <CheckSquare size={14} style={{ color: '#7c6fff' }} />
+                  </div>
+                  <span className="font-bold text-[15px] text-[#ededff]">Recent Tasks</span>
+                </div>
+                <Link to="/tasks" className="text-xs font-semibold flex items-center gap-1 transition-colors" style={{ color: '#7c6fff' }}>
+                  All tasks <ChevronRight size={13} />
+                </Link>
+              </div>
+
+              <div className="divide-y" style={{ borderColor: 'rgba(255,255,255,0.04)' }}>
+                {recentTasks.length === 0 ? (
+                  <div className="px-6 py-14 text-center text-sm text-[#44445a]">
+                    No tasks assigned yet. Head to the taskboard to get started.
+                  </div>
+                ) : (
+                  recentTasks.map((task) => {
+                    const st = STATUS_STYLES[task.status] ?? STATUS_STYLES.Todo;
+                    return (
                       <div
                         key={task._id}
-                        className="py-3.5 flex items-center justify-between gap-4 group cursor-pointer"
+                        className="px-6 py-4 flex items-center gap-4 group cursor-pointer transition-colors duration-150"
+                        style={{ borderColor: 'rgba(255,255,255,0.04)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                       >
-                        <div className="truncate flex-grow">
-                          <p className="font-bold text-text-primary text-sm group-hover:text-accent-primary transition-colors truncate">
+                        {/* Status dot */}
+                        <div
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ background: st.dot, boxShadow: `0 0 6px ${st.dot}80` }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-[#cccce0] truncate group-hover:text-[#ededff] transition-colors">
                             {task.title}
                           </p>
-                          <div className="flex items-center gap-3 mt-1">
-                            <p className="text-text-muted text-xs truncate max-w-[360px]">
-                              {task.description || 'No description provided.'}
+                          {task.dueDate && (
+                            <p className="text-xs text-[#44445a] mt-0.5 flex items-center gap-1">
+                              <Calendar size={10} />
+                              {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </p>
-                            {task.dueDate && (
-                              <span className="text-3xs text-text-secondary bg-bg-base px-2 py-0.5 rounded border border-border-default flex items-center gap-1 font-semibold">
-                                <Calendar className="h-3 w-3" />
-                                {new Date(task.dueDate).toLocaleDateString(undefined, {
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
-                              </span>
-                            )}
-                          </div>
+                          )}
                         </div>
                         <span
-                          className={`text-2xs font-bold px-2.5 py-0.5 rounded-full capitalize border flex-shrink-0 ${
-                            task.status === 'Done'
-                              ? 'bg-accent-success/10 text-accent-success border-accent-success/20'
-                              : task.status === 'InProgress'
-                              ? 'bg-accent-warning/10 text-accent-warning border-accent-warning/20'
-                              : task.status === 'Cancelled'
-                              ? 'bg-accent-danger/10 text-accent-danger border-accent-danger/20'
-                              : 'bg-accent-secondary/10 text-accent-secondary border-accent-secondary/20'
-                          }`}
+                          className="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full"
+                          style={{ background: st.bg, color: st.text }}
                         >
                           {task.status === 'InProgress' ? 'In Progress' : task.status}
                         </span>
                       </div>
-                    ))
-                  )}
-                </div>
+                    );
+                  })
+                )}
               </div>
-
-              {recentTasks.length > 0 && (
-                <Link
-                  to="/tasks"
-                  className="inline-flex items-center justify-center gap-1.5 w-full py-3 rounded-xl bg-bg-overlay border border-border-default hover:border-accent-primary/20 hover:text-accent-primary text-text-primary font-bold text-xs transition-all mt-4"
-                >
-                  Open Taskboard
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              )}
             </div>
 
-            {/* Teams Sidebar panel */}
-            <div className="animate-panel lg:col-span-1 rounded-2xl border border-border-default bg-bg-surface p-6 shadow-xl space-y-6 flex flex-col justify-between hover:shadow-2xl transition-all duration-300">
-              <div>
-                <div className="flex items-center justify-between border-b border-border-default/50 pb-3">
-                  <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
-                    <Users className="h-5 w-5 text-accent-secondary" />
-                    Active Teams
-                  </h3>
-                  <span className="text-xs text-text-secondary font-semibold">
-                    {teams.length} Workspace{teams.length === 1 ? '' : 's'}
-                  </span>
-                </div>
-
-                <div className="mt-4 space-y-3">
-                  {teams.length === 0 ? (
-                    <div className="text-center py-12 text-sm text-text-muted">
-                      You are not a member of any teams yet. Create one to get started.
-                    </div>
-                  ) : (
-                    teams.slice(0, 4).map((team) => (
-                      <div
-                        key={team._id}
-                        className="flex items-center justify-between p-3.5 rounded-xl bg-bg-base/40 border border-border-subtle hover:border-accent-secondary/20 hover:bg-bg-base/70 transition-all cursor-pointer group"
-                      >
-                        <div className="truncate">
-                          <p className="font-bold text-text-primary text-sm group-hover:text-accent-secondary transition-colors truncate">
-                            {team.name}
-                          </p>
-                          <p className="text-text-muted text-xs mt-0.5">
-                            {team.members.length} member{team.members.length === 1 ? '' : 's'}
-                          </p>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-text-muted group-hover:text-accent-secondary transition-colors" />
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <Link
-                to="/teams"
-                className="inline-flex items-center justify-center gap-1.5 w-full py-3 rounded-xl bg-bg-overlay border border-border-default hover:border-accent-secondary/20 hover:text-accent-secondary text-text-primary font-bold text-xs transition-all"
+            {/* Teams panel */}
+            <div
+              className="dash-panel rounded-2xl overflow-hidden flex flex-col"
+              style={{ background: '#0d0d18', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
+            >
+              <div
+                className="flex items-center justify-between px-6 py-4"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
               >
-                View All Teams
-                <ChevronRight className="h-4 w-4" />
-              </Link>
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center"
+                    style={{ background: 'rgba(45,212,191,0.12)' }}
+                  >
+                    <Users size={14} style={{ color: '#2dd4bf' }} />
+                  </div>
+                  <span className="font-bold text-[15px] text-[#ededff]">Teams</span>
+                </div>
+                <span
+                  className="text-[11px] font-bold px-2.5 py-1 rounded-full"
+                  style={{ background: 'rgba(45,212,191,0.1)', color: '#2dd4bf' }}
+                >
+                  {teams.length} active
+                </span>
+              </div>
+
+              <div className="flex-1 p-4 space-y-2.5">
+                {teams.length === 0 ? (
+                  <div className="text-center py-10 text-sm text-[#44445a]">No teams yet.</div>
+                ) : (
+                  teams.slice(0, 5).map((team, i) => (
+                    <div
+                      key={team._id}
+                      className="flex items-center gap-3 p-3.5 rounded-xl cursor-pointer transition-all duration-150"
+                      style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(124,111,255,0.06)';
+                        e.currentTarget.style.borderColor = 'rgba(124,111,255,0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.025)';
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)';
+                      }}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white flex-shrink-0"
+                        style={{
+                          background: `linear-gradient(135deg, ${TEAM_COLORS[i % TEAM_COLORS.length][0]}, ${TEAM_COLORS[i % TEAM_COLORS.length][1]})`,
+                        }}
+                      >
+                        {team.name.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#cccce0] truncate">{team.name}</p>
+                        <p className="text-[11px] text-[#44445a]">{team.members.length} members</p>
+                      </div>
+                      <ChevronRight size={14} className="text-[#44445a] flex-shrink-0" />
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="p-4 pt-0">
+                <Link
+                  to="/teams"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: '#8080a0' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#ededff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = '#8080a0'; }}
+                >
+                  Manage all teams <ChevronRight size={13} />
+                </Link>
+              </div>
             </div>
+
           </div>
         </>
       )}
@@ -278,28 +343,54 @@ export default function Dashboard() {
   );
 }
 
-function MetricCard({
-  label,
-  value,
-  desc,
-  color,
-  glowColor,
+const TEAM_COLORS = [
+  ['#7c6fff', '#5b54d4'],
+  ['#2dd4bf', '#059669'],
+  ['#f59e0b', '#d97706'],
+  ['#f43f5e', '#be123c'],
+  ['#8b5cf6', '#6d28d9'],
+];
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  return 'evening';
+}
+
+function StatCard({
+  label, value, icon, color, glow,
 }: {
   label: string;
   value: number;
-  desc: string;
+  icon: React.ReactNode;
   color: string;
-  glowColor: string;
+  glow: string;
 }) {
   return (
-    <div className={`animate-metric-card rounded-2xl border bg-bg-surface p-5.5 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between min-h-[135px] relative overflow-hidden ${glowColor}`}>
-      {/* Subtle card glow overlay */}
-      <div className="absolute right-0 bottom-0 w-24 h-24 bg-gradient-to-br from-transparent to-white/3 opacity-[0.02] pointer-events-none" />
-      <div>
-        <span className="text-2xs font-bold text-text-muted uppercase tracking-widest">{label}</span>
-        <h4 className={`text-4xl font-black mt-2 tracking-tight ${color}`}>{value}</h4>
+    <div
+      className="dash-stat rounded-2xl p-5 transition-all duration-200 cursor-default relative overflow-hidden"
+      style={{
+        background: '#0d0d18',
+        border: `1px solid ${glow.replace('0.15', '0.12').replace('0.12', '0.1')}`,
+        boxShadow: `0 4px 24px ${glow}, 0 1px 3px rgba(0,0,0,0.3)`,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 32px ${glow.replace('0.12','0.22')}, 0 1px 3px rgba(0,0,0,0.3)`; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 4px 24px ${glow}, 0 1px 3px rgba(0,0,0,0.3)`; }}
+    >
+      {/* Subtle corner glow */}
+      <div
+        className="absolute top-0 right-0 w-20 h-20 pointer-events-none"
+        style={{ background: `radial-gradient(circle at 80% 20%, ${glow.replace('0.12','0.35')}, transparent 70%)` }}
+      />
+      <div
+        className="w-8 h-8 rounded-xl flex items-center justify-center mb-3"
+        style={{ background: glow, color }}
+      >
+        {icon}
       </div>
-      <p className="text-text-secondary text-2xs mt-3.5 leading-relaxed">{desc}</p>
+      <div className="text-3xl font-black" style={{ color }}>{value}</div>
+      <div className="text-xs font-semibold text-[#606080] mt-1">{label}</div>
     </div>
   );
 }

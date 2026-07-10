@@ -17,4 +17,9 @@ export const teamsService = {
     const response = await api.patch<ApiResponse<Team>>(`/teams/${teamId}`, payload);
     return response.data;
   },
+
+  addMember: async (teamId: string, email: string, role: string) => {
+    const response = await api.post<ApiResponse<Team>>(`/teams/${teamId}/members`, { email, role });
+    return response.data;
+  },
 };

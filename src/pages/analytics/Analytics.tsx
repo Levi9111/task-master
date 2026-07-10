@@ -1,101 +1,82 @@
 import { useState, useEffect, useRef } from 'react';
 import { useMyTeamsQuery } from '../../queries/useTeamQueries';
 import { useTeamStatsQuery } from '../../queries/useAnalyticsQueries';
-import { BarChart3, Users, Loader2, PieChart, CheckSquare, Sparkles, TrendingUp } from 'lucide-react';
+import { BarChart3, Users, Loader2, TrendingUp, CheckCircle2, Zap, AlertCircle } from 'lucide-react';
 import gsap from 'gsap';
+
+const STAT_CONFIG = [
+  { status: 'Todo',       color: '#7c6fff', glow: 'rgba(124,111,255,0.25)', bg: 'rgba(124,111,255,0.12)' },
+  { status: 'InProgress', color: '#f59e0b', glow: 'rgba(245,158,11,0.25)',  bg: 'rgba(245,158,11,0.12)'  },
+  { status: 'Done',       color: '#10b981', glow: 'rgba(16,185,129,0.25)',  bg: 'rgba(16,185,129,0.12)'  },
+  { status: 'Cancelled',  color: '#f43f5e', glow: 'rgba(244,63,94,0.25)',   bg: 'rgba(244,63,94,0.12)'   },
+];
+
+const MOCK_STATS = [
+  { status: 'Todo',       count: 12 },
+  { status: 'InProgress', count: 8  },
+  { status: 'Done',       count: 18 },
+  { status: 'Cancelled',  count: 3  },
+];
 
 export default function AnalyticsPage() {
   const { data: teamsData, isLoading: teamsLoading } = useMyTeamsQuery();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // If a team is not selected but teams exist, select the first one automatically
-  const teams = teamsData?.data || [];
-  if (teams.length > 0 && !selectedTeamId) {
-    setSelectedTeamId(teams[0]._id);
-  }
+  const teams = teamsData?.data ?? [];
+  if (teams.length > 0 && !selectedTeamId) setSelectedTeamId(teams[0]._id);
 
   const { data: statsData, isLoading: statsLoading, error } = useTeamStatsQuery(
-    selectedTeamId,
-    !!selectedTeamId
+    selectedTeamId, !!selectedTeamId
   );
 
-  const selectedTeamName = teams.find((t) => t._id === selectedTeamId)?.name || '';
+  const rawStats = statsData?.data ?? [];
+  const isFallback = !!error || rawStats.length === 0;
+  const stats = isFallback ? MOCK_STATS : rawStats;
+  const total = stats.reduce((s, c) => s + c.count, 0);
+  const completionRate = total > 0
+    ? Math.round(((stats.find((s) => s.status === 'Done')?.count ?? 0) / total) * 100)
+    : 0;
 
-  const hasError = !!error;
-  const rawStats = statsData?.data || [];
-  
-  const mockStats = [
-    { status: 'Todo', count: 12 },
-    { status: 'InProgress', count: 8 },
-    { status: 'Done', count: 18 },
-    { status: 'Cancelled', count: 3 },
-  ];
+  const selectedTeam = teams.find((t) => t._id === selectedTeamId);
 
-  const stats = hasError || rawStats.length === 0 ? mockStats : rawStats;
-  const isFallback = hasError || rawStats.length === 0;
-  const totalTasks = stats.reduce((acc, curr) => acc + curr.count, 0);
-
-  const colors: Record<string, string> = {
-    Todo: 'bg-accent-secondary',
-    InProgress: 'bg-accent-primary',
-    Done: 'bg-accent-success',
-    Cancelled: 'bg-accent-danger',
-  };
-
-  const borderColors: Record<string, string> = {
-    Todo: 'border-accent-secondary/15 shadow-accent-secondary/5',
-    InProgress: 'border-accent-primary/15 shadow-accent-primary/5',
-    Done: 'border-accent-success/15 shadow-accent-success/5',
-    Cancelled: 'border-accent-danger/15 shadow-accent-danger/5',
-  };
-
-  // GSAP animations for stats and progress bar loads
   useEffect(() => {
     if (statsLoading || teamsLoading) return;
-
     const ctx = gsap.context(() => {
-      // Animate progress bar widths from 0%
-      stats.forEach((item) => {
-        const percentage = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
-        gsap.fromTo(
-          `.bar-${item.status}`,
-          { width: '0%' },
-          { width: `${percentage}%`, duration: 1.1, ease: 'power3.out', delay: 0.2 }
-        );
+      gsap.fromTo('.analytics-bar', { scaleX: 0 }, {
+        scaleX: 1, duration: 1.0, ease: 'power3.out', delay: 0.2, stagger: 0.1,
       });
-
-      // Stagger stats card entrance
-      gsap.fromTo(
-        '.animate-stat-card',
-        { opacity: 0, y: 15 },
-        { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power2.out', delay: 0.1 }
-      );
+      gsap.fromTo('.analytics-card', { opacity: 0, y: 16 }, {
+        opacity: 1, y: 0, duration: 0.55, stagger: 0.09, ease: 'power2.out',
+      });
     }, containerRef);
-
     return () => ctx.revert();
-  }, [statsLoading, teamsLoading, selectedTeamId, stats, totalTasks]);
+  }, [statsLoading, teamsLoading, selectedTeamId]);
 
   return (
-    <div ref={containerRef} className="max-w-5xl mx-auto space-y-8 pb-16">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div ref={containerRef} className="max-w-[1100px] mx-auto space-y-7 pb-16">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-text-primary">Analytics</h1>
-          <p className="text-text-secondary mt-1">Monitor task distribution, completion rates, and member velocity.</p>
+          <h1 className="text-2xl font-black text-[#ededff] tracking-tight">Analytics</h1>
+          <p className="text-sm text-[#606080] mt-0.5">Task distribution and performance insights.</p>
         </div>
 
-        {/* Team Dropdown Selector */}
         {teams.length > 0 && (
-          <div className="flex items-center gap-3 bg-bg-surface border border-border-default rounded-xl px-4 py-2">
-            <Users className="h-4.5 w-4.5 text-text-secondary" />
+          <div
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl"
+            style={{ background: '#0d0d18', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <Users size={14} style={{ color: '#7c6fff' }} />
             <select
-              value={selectedTeamId || ''}
+              value={selectedTeamId ?? ''}
               onChange={(e) => setSelectedTeamId(e.target.value)}
-              className="bg-transparent border-none text-text-primary focus:outline-none text-sm font-semibold pr-4 cursor-pointer"
+              className="bg-transparent text-sm font-semibold text-[#ededff] outline-none cursor-pointer pr-2"
+              style={{ appearance: 'none' }}
             >
               {teams.map((t) => (
-                <option key={t._id} value={t._id} className="bg-bg-surface text-text-primary">
+                <option key={t._id} value={t._id} style={{ background: '#0d0d18' }}>
                   {t.name}
                 </option>
               ))}
@@ -105,65 +86,80 @@ export default function AnalyticsPage() {
       </div>
 
       {teamsLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="h-10 w-10 text-accent-primary animate-spin" />
-          <p className="text-text-secondary text-sm">Loading analytics modules...</p>
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <Loader2 className="text-[#7c6fff] animate-spin" size={36} />
+          <p className="text-[#606080] text-sm">Loading analytics…</p>
         </div>
       ) : teams.length === 0 ? (
-        <div className="rounded-2xl border border-border-default bg-bg-surface/30 p-12 text-center flex flex-col items-center justify-center max-w-md mx-auto mt-12 space-y-4">
-          <div className="p-3 bg-bg-overlay rounded-2xl border border-border-default text-text-muted">
-            <BarChart3 className="h-8 w-8" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-text-primary">No Teams Found</h3>
-            <p className="text-text-secondary text-sm mt-1">
-              Join or create a team to start collecting analytics statistics.
-            </p>
-          </div>
+        <div
+          className="flex flex-col items-center justify-center py-20 rounded-3xl"
+          style={{ background: '#0d0d18', border: '1px dashed rgba(255,255,255,0.08)' }}
+        >
+          <BarChart3 size={36} className="text-[#44445a] mb-3" />
+          <p className="text-[#606080] text-sm">Join or create a team to see analytics.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          {/* Main Status Distribution */}
-          <div className="animate-stat-card md:col-span-2 rounded-2xl border border-border-default bg-bg-surface p-6 sm:p-8 shadow-xl space-y-8 relative overflow-hidden">
-            <div className="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-accent-primary/5 to-transparent pointer-events-none" />
-            
-            <div className="flex items-center justify-between border-b border-border-default/50 pb-4">
-              <div className="flex items-center gap-2">
-                <PieChart className="h-5 w-5 text-accent-primary" />
-                <h3 className="text-lg font-bold text-text-primary">Task Distribution</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+          {/* ── Main Chart Panel ── */}
+          <div
+            className="analytics-card lg:col-span-2 rounded-2xl overflow-hidden"
+            style={{ background: '#0d0d18', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
+          >
+            {/* Header */}
+            <div
+              className="flex items-center justify-between px-6 py-4"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(124,111,255,0.12)' }}>
+                  <BarChart3 size={14} style={{ color: '#7c6fff' }} />
+                </div>
+                <span className="font-bold text-[15px] text-[#ededff]">Task Distribution</span>
+                {isFallback && (
+                  <span
+                    className="text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider"
+                    style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)', color: '#f59e0b' }}
+                  >
+                    Demo data
+                  </span>
+                )}
               </div>
-              {isFallback && (
-                <span className="flex items-center gap-1 text-2xs px-2.5 py-1 rounded-full font-bold bg-accent-warning/10 text-accent-warning border border-accent-warning/20">
-                  <Sparkles className="h-3 w-3" />
-                  Demo Mode
-                </span>
-              )}
+              <span className="text-xs text-[#44445a]">{selectedTeam?.name}</span>
             </div>
 
             {statsLoading ? (
-              <div className="flex items-center justify-center h-48">
-                <Loader2 className="h-8 w-8 text-accent-primary animate-spin" />
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="text-[#7c6fff] animate-spin" size={28} />
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="p-6 space-y-5">
                 {stats.map((item) => {
-                  const percentage = totalTasks > 0 ? Math.round((item.count / totalTasks) * 100) : 0;
+                  const cfg = STAT_CONFIG.find((c) => c.status === item.status) ?? STAT_CONFIG[0];
+                  const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
                   return (
                     <div key={item.status} className="space-y-2">
-                      <div className="flex justify-between text-sm font-semibold">
-                        <span className="text-text-primary flex items-center gap-2">
-                          <span className={`h-2.5 w-2.5 rounded-full ${colors[item.status]}`} />
-                          {item.status === 'InProgress' ? 'In Progress' : item.status}
-                        </span>
-                        <span className="text-text-secondary">
-                          {item.count} task{item.count === 1 ? '' : 's'} ({percentage}%)
-                        </span>
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-2 h-2 rounded-full" style={{ background: cfg.color, boxShadow: `0 0 6px ${cfg.color}80` }} />
+                          <span className="font-semibold text-[#cccce0]">
+                            {item.status === 'InProgress' ? 'In Progress' : item.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold" style={{ color: cfg.color }}>{pct}%</span>
+                          <span className="text-xs text-[#44445a]">{item.count} tasks</span>
+                        </div>
                       </div>
-                      <div className="w-full bg-bg-base h-2.5 rounded-full overflow-hidden border border-border-subtle">
+                      {/* Track */}
+                      <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
                         <div
-                          className={`h-full rounded-full bar-${item.status} ${colors[item.status]}`}
-                          style={{ width: '0%' }} // Animated by GSAP on mount
+                          className="analytics-bar h-full rounded-full origin-left"
+                          style={{
+                            width: `${pct}%`,
+                            background: `linear-gradient(90deg, ${cfg.color}, ${cfg.color}99)`,
+                            boxShadow: `0 0 8px ${cfg.glow}`,
+                          }}
                         />
                       </div>
                     </div>
@@ -171,47 +167,84 @@ export default function AnalyticsPage() {
                 })}
               </div>
             )}
+
+            {/* Total bar */}
+            {!statsLoading && (
+              <div
+                className="px-6 py-4 flex items-center justify-between"
+                style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+              >
+                <span className="text-xs font-semibold text-[#44445a] uppercase tracking-wider">Total Tasks</span>
+                <span className="text-2xl font-black text-[#ededff]">{total}</span>
+              </div>
+            )}
           </div>
 
-          {/* Quick Metrics Column */}
-          <div className="md:col-span-1 flex flex-col gap-6">
-            
-            {/* Total Tasks metric card */}
-            <div className={`animate-stat-card rounded-2xl border bg-bg-surface p-6 shadow-xl relative overflow-hidden flex flex-col justify-between h-full min-h-[160px] ${borderColors.InProgress}`}>
-              <div className="absolute right-0 bottom-0 w-24 h-24 bg-gradient-to-br from-transparent to-white/5 opacity-[0.03] pointer-events-none" />
-              <div>
-                <span className="text-2xs font-bold text-text-muted uppercase tracking-widest">Total Tasks</span>
-                <h4 className="text-4xl font-black text-text-primary mt-2">
-                  {statsLoading ? '...' : totalTasks}
-                </h4>
+          {/* ── Side Metric Cards ── */}
+          <div className="flex flex-col gap-4">
+
+            {/* Completion rate */}
+            <div
+              className="analytics-card rounded-2xl p-6 relative overflow-hidden"
+              style={{ background: '#0d0d18', border: '1px solid rgba(16,185,129,0.12)', boxShadow: '0 4px 24px rgba(16,185,129,0.06)' }}
+            >
+              <div className="absolute top-0 right-0 w-28 h-28 pointer-events-none" style={{ background: 'radial-gradient(circle at 80% 20%, rgba(16,185,129,0.12), transparent 70%)' }} />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: 'rgba(16,185,129,0.12)' }}>
+                <CheckCircle2 size={18} style={{ color: '#10b981' }} />
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-text-secondary mt-6">
-                <CheckSquare className="h-4 w-4 text-accent-primary" />
-                <span>Across team: {selectedTeamName}</span>
+              <div className="text-4xl font-black" style={{ color: '#10b981' }}>{completionRate}%</div>
+              <div className="text-xs font-semibold text-[#606080] mt-1">Completion Rate</div>
+              <div className="mt-4 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <div
+                  className="h-full rounded-full transition-all duration-1000"
+                  style={{ width: `${completionRate}%`, background: 'linear-gradient(90deg, #10b981, #059669)', boxShadow: '0 0 8px rgba(16,185,129,0.5)' }}
+                />
               </div>
             </div>
 
-            {/* Performance status card */}
-            <div className={`animate-stat-card rounded-2xl border bg-bg-surface p-6 shadow-xl relative overflow-hidden flex flex-col justify-between h-full min-h-[160px] ${borderColors.Done}`}>
-              <div className="absolute right-0 bottom-0 w-24 h-24 bg-gradient-to-br from-transparent to-white/5 opacity-[0.03] pointer-events-none" />
-              <div>
-                <span className="text-2xs font-bold text-text-muted uppercase tracking-widest">Completion Rate</span>
-                <h4 className="text-4xl font-black text-accent-success mt-2">
-                  {statsLoading
-                    ? '...'
-                    : totalTasks > 0
-                    ? `${Math.round(
-                        ((stats.find((s) => s.status === 'Done')?.count || 0) / totalTasks) * 100
-                      )}%`
-                    : '0%'}
-                </h4>
+            {/* In Progress */}
+            <div
+              className="analytics-card rounded-2xl p-6 relative overflow-hidden"
+              style={{ background: '#0d0d18', border: '1px solid rgba(245,158,11,0.1)', boxShadow: '0 4px 24px rgba(245,158,11,0.05)' }}
+            >
+              <div className="absolute top-0 right-0 w-28 h-28 pointer-events-none" style={{ background: 'radial-gradient(circle at 80% 20%, rgba(245,158,11,0.1), transparent 70%)' }} />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: 'rgba(245,158,11,0.1)' }}>
+                <TrendingUp size={18} style={{ color: '#f59e0b' }} />
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-text-secondary mt-6">
-                <TrendingUp className="h-4 w-4 text-accent-success" />
-                <span>Finished assignments velocity</span>
+              <div className="text-4xl font-black" style={{ color: '#f59e0b' }}>
+                {stats.find((s) => s.status === 'InProgress')?.count ?? 0}
               </div>
+              <div className="text-xs font-semibold text-[#606080] mt-1">In Progress</div>
             </div>
-            
+
+            {/* Cancelled */}
+            <div
+              className="analytics-card rounded-2xl p-6 relative overflow-hidden"
+              style={{ background: '#0d0d18', border: '1px solid rgba(244,63,94,0.1)', boxShadow: '0 4px 24px rgba(244,63,94,0.05)' }}
+            >
+              <div className="absolute top-0 right-0 w-28 h-28 pointer-events-none" style={{ background: 'radial-gradient(circle at 80% 20%, rgba(244,63,94,0.08), transparent 70%)' }} />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: 'rgba(244,63,94,0.1)' }}>
+                <AlertCircle size={18} style={{ color: '#f43f5e' }} />
+              </div>
+              <div className="text-4xl font-black" style={{ color: '#f43f5e' }}>
+                {stats.find((s) => s.status === 'Cancelled')?.count ?? 0}
+              </div>
+              <div className="text-xs font-semibold text-[#606080] mt-1">Cancelled</div>
+            </div>
+
+            {/* Total velocity */}
+            <div
+              className="analytics-card rounded-2xl p-6 relative overflow-hidden"
+              style={{ background: '#0d0d18', border: '1px solid rgba(124,111,255,0.12)', boxShadow: '0 4px 24px rgba(124,111,255,0.06)' }}
+            >
+              <div className="absolute top-0 right-0 w-28 h-28 pointer-events-none" style={{ background: 'radial-gradient(circle at 80% 20%, rgba(124,111,255,0.1), transparent 70%)' }} />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: 'rgba(124,111,255,0.1)' }}>
+                <Zap size={18} style={{ color: '#7c6fff' }} />
+              </div>
+              <div className="text-4xl font-black" style={{ color: '#7c6fff' }}>{total}</div>
+              <div className="text-xs font-semibold text-[#606080] mt-1">Total Tasks</div>
+            </div>
+
           </div>
         </div>
       )}

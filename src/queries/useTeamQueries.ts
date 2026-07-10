@@ -46,3 +46,22 @@ export function useUpdateTeamMutation() {
     },
   });
 }
+
+export function useAddMemberMutation() {
+  const queryClient = useQueryClient();
+  const dispatch = useAppDispatch();
+
+  return useMutation({
+    mutationFn: ({ teamId, email, role }: { teamId: string; email: string; role: string }) =>
+      teamsService.addMember(teamId, email, role),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: ['team', data.data._id] });
+      dispatch(addToast({ message: 'Member added to team successfully!', type: 'success' }));
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || 'Failed to add member';
+      dispatch(addToast({ message: Array.isArray(message) ? message[0] : message, type: 'error' }));
+    },
+  });
+}
